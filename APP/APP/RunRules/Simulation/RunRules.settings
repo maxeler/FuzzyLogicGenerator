@@ -3,7 +3,7 @@
 <common>
 <boardModel type="VECTIS"/>
 <simulation enabled="true"/>
-<enableMPCX enabled="{% if cookiecutter.optimize_for_mpcx %}true{% else %}false{% endif %}"/>
+<enableMPCX enabled="false"/>
 </common>
 <maxFiles>
 <maxFile buildName="{{cookiecutter.stem_name}}" buildOrUseExisting="build">

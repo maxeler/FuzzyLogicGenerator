@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <buildProfile>
 <common>
-<boardModel type="VECTIS"/>
+<boardModel type="MAIA"/>
 <simulation enabled="false"/>
-<enableMPCX enabled="{% if cookiecutter.optimize_for_mpcx %}true{% else %}false{% endif %}"/>
+<enableMPCX enabled="false"/>
+<programArgument argument="MPPRStartCT" value="1"/>
+<programArgument argument="MPPREndCT" value="8"/>
 </common>
 <maxFiles>
 <maxFile buildName="{{cookiecutter.stem_name}}" buildOrUseExisting="build">
