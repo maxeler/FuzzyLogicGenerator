@@ -1,0 +1,108 @@
+package simpledimmerapp;
+
+import com.maxeler.maxcompiler.v2.build.EngineParameters;
+import com.maxeler.maxcompiler.v2.managers.MAX3BoardModel;
+
+public class SimpleDimmerAppEngineParameters extends EngineParameters {
+
+    private static final String board                = "DFEModel";
+    private static final String isBuffGce            = "isBuffGce";
+    private static final String isMultiCycleReset    = "isMultiCycleReset";
+    private static final String CEReplication        = "CEReplication";
+    private static final String maxFileName          = "maxFileName";
+    private static final String target               = "target";
+    private static final String MPPRRetryThreshold   = "MPPRRetryThreshold";
+    private static final String MPPRThreads          = "MPPRThreads";
+    private static final String streamFrequency      = "streamFrequency";
+    private static final String memFrequency         = "memFrequency";
+    private static final String numPipes             = "numPipes";
+    private static final String tag                  = "tag";
+    private static final String hasStreamStatus      = "hasStreamStatus";
+    private static final String isPhaseClocks        = "isPhaseClocks";
+    private static final String dspFactor            = "dspFactor";
+
+    public SimpleDimmerAppEngineParameters(String[] argv) {
+        super(argv);
+    }
+
+    public boolean getIsBuffGce() {
+        return getParam(isBuffGce);
+    }
+
+    public boolean getIsMultiCycleReset() {
+        return getParam(isMultiCycleReset);
+    }
+
+    public int getCEReplication() {
+        return getParam(CEReplication);
+    }
+
+    public int getStreamFrequency() {
+        return getParam(streamFrequency);
+    }
+
+    public int getMemFrequency() {
+        return getParam(memFrequency);
+    }
+
+    public int getNumPipes() {
+        return getParam(numPipes);
+    }
+
+    public String getTag() {
+        return getParam(tag);
+    }
+
+    public boolean getHasStreamStatus() {
+        return getParam(hasStreamStatus);
+    }
+
+    public boolean getIsPhaseClocks() {
+        return getParam(isPhaseClocks);
+    }
+
+    public double getDspFactor() {
+        return getParam(dspFactor);
+    }
+
+    @Override
+    protected void declarations() {
+        /* Standard parameters */
+
+        // naming
+        declareParam(maxFileName, DataType.STRING, "SimpleDimmerApp");
+        declareParam(tag, DataType.STRING, "");
+
+        // build parameters
+        declareParam(target, Target.class, Target.DFE);
+        declareParam(board,  DataType.MAXBOARDMODEL, MAX3BoardModel.MAX3424A);
+        declareParam(MPPRRetryThreshold, DataType.INT, 500);
+        declareParam(MPPRThreads, DataType.INT, 4);
+        declareParam(CEReplication, DataType.INT, 6);
+        declareParam(isBuffGce, DataType.BOOL, true);
+        declareParam(isMultiCycleReset, DataType.BOOL, true);
+        declareParam(isPhaseClocks, DataType.BOOL, false);
+
+        // common kernel parameters
+        declareParam(streamFrequency, DataType.INT, 150);
+        declareParam(memFrequency, DataType.INT, -1);
+        declareParam(numPipes, DataType.INT, 2);
+        declareParam(dspFactor, DataType.DOUBLE, 0.5);
+
+        // for debugging
+        declareParam(hasStreamStatus, DataType.BOOL, false);
+    }
+
+    @Override
+    protected void validate() {
+
+    }
+
+    @Override
+    public String getBuildName() {
+        return String.format("%s_%s_%s%s",
+                getMaxFileName(), getDFEModel().toString(), getTarget().toString(),
+                getTag());
+    }
+
+}

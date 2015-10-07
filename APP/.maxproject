@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<maxCompilerManager version="2">
+<enginePart internalEngineSubproject="FuzzyLogicGenerator_EngineCode" isSrcBin="false" isUseDefaultSelected="false" outputLocation="/FuzzyLogicGenerator_EngineCode/bin" projectName="FuzzyLogicGenerator"/>
+<cpuPart internalCpuSubproject="FuzzyLogicGenerator_CPUCode"/>
+<watchedFiles/>
+</maxCompilerManager>

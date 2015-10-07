@@ -1,0 +1,95 @@
+package simpledimmerapp;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelConfiguration;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler._KernelConfiguration;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig;
+import com.maxeler.maxcompiler.v2.managers.BuildConfig.Effort;
+import com.maxeler.maxcompiler.v2.managers.custom.CustomManager;
+import com.maxeler.maxcompiler.v2.managers.custom.DFELink;
+import com.maxeler.maxcompiler.v2.managers.custom.blocks.KernelBlock;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.DebugLevel;
+import com.maxeler.maxcompiler.v2.managers.custom.stdlib.MemoryControllerConfig;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.CPUTypes;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.EngineInterface.Direction;
+import com.maxeler.maxcompiler.v2.managers.engine_interfaces.InterfaceParam;
+
+public final class SimpleDimmerAppManager extends CustomManager {
+
+    private final SimpleDimmerAppEngineParameters m_params;
+    private KernelConfiguration m_kernelConfig;
+
+    public SimpleDimmerAppManager(SimpleDimmerAppEngineParameters params) {
+        super(params);
+
+        m_params = params;
+
+        setConfiguration();
+        addInterfaces();
+        setDesign();
+    }
+
+    private void setConfiguration() {
+        MemoryControllerConfig memConfig = new MemoryControllerConfig();
+        config.setMemoryControllerConfig(memConfig);
+
+        config.setDefaultStreamClockFrequency(m_params.getStreamFrequency());
+        if(m_params.getMemFrequency() > 0) config.setOnCardMemoryFrequency(m_params.getMemFrequency());
+        DebugLevel debugLevel = new DebugLevel();
+        debugLevel.setHasStreamStatus(m_params.getHasStreamStatus());
+        debug.setDebugLevel(debugLevel);
+
+        m_kernelConfig = getCurrentKernelConfig();
+        m_kernelConfig.optimization.setCEReplicationNumPartitions(m_params.getCEReplication());
+        m_kernelConfig.optimization.setUseGlobalClockBuffer(m_params.getIsBuffGce());
+        _KernelConfiguration.getPhotonKernelConfig(getCurrentKernelConfig()).optimizations().setMultiCycleResetEnabled(m_params.getIsMultiCycleReset());
+       _KernelConfiguration.getPhotonKernelConfig(getCurrentKernelConfig()).setClockPhasePartitioningEnabled(m_params.getIsPhaseClocks());
+    }
+
+    private EngineInterface createDefaultInterface() {
+        EngineInterface engine_interface = new EngineInterface("default");
+
+        CPUTypes   type = CPUTypes.FLOAT;
+        int        size = type.sizeInBytes();
+        InterfaceParam  N    = engine_interface.addParam("N", CPUTypes.INT);
+
+        engine_interface.setTicks("SimpleDimmerAppKernel", N);
+
+        engine_interface.setStream("Ambient", type, N * size);
+        engine_interface.setStream("Power", type, N * size);
+
+        engine_interface.ignoreAll(Direction.IN_OUT);
+        return engine_interface;
+    }
+
+    private void addInterfaces() {
+        createSLiCinterface(createDefaultInterface());
+    }
+
+    private void setDesign() {
+        KernelParameters kernelParams = makeKernelParameters(
+                SimpleDimmerAppKernel.class.getSimpleName(), m_kernelConfig);
+        KernelBlock kernel = addKernel(new SimpleDimmerAppKernel(kernelParams, m_params));
+
+        DFELink fromCPUSimpleDimmerApp = addStreamFromCPU("Ambient");
+        DFELink toCPUSimpleDimmerApp = addStreamToCPU("Power");
+
+        kernel.getInput("Ambient") <== fromCPUSimpleDimmerApp;
+        toCPUSimpleDimmerApp <== kernel.getOutput("Power");
+    }
+
+    public static void main(String[] args) {
+        SimpleDimmerAppEngineParameters params = new SimpleDimmerAppEngineParameters(args);
+        SimpleDimmerAppManager manager = new SimpleDimmerAppManager(params);
+
+        BuildConfig buildConfig = manager.getBuildConfig();
+        buildConfig.setBuildEffort(Effort.VERY_HIGH);
+        buildConfig.setEnableTimingAnalysis(true);
+        buildConfig.setMPPRCostTableSearchRange(params.getMPPRStartCT(), params.getMPPREndCT());
+        buildConfig.setMPPRParallelism(params.getMPPRThreads());
+        buildConfig.setMPPRRetryNearMissesThreshold(params.getMPPRRetryThreshold());
+
+        manager.build();
+    }
+}

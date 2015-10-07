@@ -1,0 +1,156 @@
+package simpledimmerapp;
+
+import com.maxeler.maxcompiler.v2.kernelcompiler.Kernel;
+import com.maxeler.maxcompiler.v2.kernelcompiler.KernelParameters;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.base.DFEVar;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStruct;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEStructType;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVector;
+import com.maxeler.maxcompiler.v2.kernelcompiler.types.composite.DFEVectorType;
+
+public class SimpleDimmerAppKernel extends Kernel {
+
+    static final DFEType type = dfeFloat(8, 24);
+
+    // Define Vector to describe a triangle shaped fuzzy set
+    private static final DFEVectorType<DFEVar> triangleFuzzySetType =
+            new DFEVectorType<DFEVar>(type, 3);
+
+    // Struct able to save the centroid coordinate and the area. Used for defuzzication
+    private static final DFEStructType defuzzificationStruct = new DFEStructType(
+            new DFEStructType.StructFieldType("Area", type),
+            new DFEStructType.StructFieldType("Centroid", type));
+
+    protected SimpleDimmerAppKernel(KernelParameters parameters, SimpleDimmerAppEngineParameters engineParameters) {
+        super(parameters);
+
+        // ------ Section: Definition of Fuzzy Sets (Terms) ------
+        // ------ Input Variable - Define Fuzzy Sets - Ambient ------
+        DFEVector<DFEVar> AmbientDARK = createNewTriangleVector(0.00000, 0.250000, 0.500000);
+        DFEVector<DFEVar> AmbientMEDIUM = createNewTriangleVector(0.250000, 0.500000, 0.750000);
+        DFEVector<DFEVar> AmbientBRIGHT = createNewTriangleVector(0.500000, 0.750000, 1.00000);
+
+        // ------ Output Variable - Define Fuzzy Sets - Power ------
+        DFEVector<DFEVar> PowerLOW = createNewTriangleVector(0.00000, 0.250000, 0.500000);
+        DFEVector<DFEVar> PowerMEDIUM = createNewTriangleVector(0.250000, 0.500000, 0.750000);
+        DFEVector<DFEVar> PowerHIGH = createNewTriangleVector(0.500000, 0.750000, 1.00000);
+
+        // ------ Section: Creating Input Streams ------
+        DFEVar Ambient = io.input("Ambient", type);
+
+        // ------ Step 1: Fuzzyfication ------
+        DFEVar AmbientDARKDegreeOfMembership = getFuzzificationTriangle(AmbientDARK, Ambient);
+        DFEVar AmbientMEDIUMDegreeOfMembership = getFuzzificationTriangle(AmbientMEDIUM, Ambient);
+        DFEVar AmbientBRIGHTDegreeOfMembership = getFuzzificationTriangle(AmbientBRIGHT, Ambient);
+
+        // Declartion of output variables
+        DFEVar PowerLOWDegreeOfMembership;
+        DFEVar PowerMEDIUMDegreeOfMembership;
+        DFEVar PowerHIGHDegreeOfMembership;
+
+        // ------ Step 2: Rule Evaluation ------
+        // Rule: if Ambient is DARK then Power is HIGH
+        PowerHIGHDegreeOfMembership = AmbientDARKDegreeOfMembership;
+        // Rule: if Ambient is MEDIUM then Power is MEDIUM
+        PowerMEDIUMDegreeOfMembership = AmbientMEDIUMDegreeOfMembership;
+        // Rule: if Ambient is BRIGHT then Power is LOW
+        PowerLOWDegreeOfMembership = AmbientBRIGHTDegreeOfMembership;
+
+        // ------ Step 3: Defuzzification ------
+        DFEStruct PowerLOWDefuzzificationStruct = getDefuzzificationTriangle(PowerLOW, PowerLOWDegreeOfMembership);
+        DFEStruct PowerMEDIUMDefuzzificationStruct = getDefuzzificationTriangle(PowerMEDIUM, PowerMEDIUMDegreeOfMembership);
+        DFEStruct PowerHIGHDefuzzificationStruct = getDefuzzificationTriangle(PowerHIGH, PowerHIGHDegreeOfMembership);
+
+        DFEVar PowerSum = 
+                PowerLOWDefuzzificationStruct.get("Area").pack().cast(type) *
+                PowerLOWDefuzzificationStruct.get("Centroid").pack().cast(type) +
+                PowerMEDIUMDefuzzificationStruct.get("Area").pack().cast(type) *
+                PowerMEDIUMDefuzzificationStruct.get("Centroid").pack().cast(type) +
+                PowerHIGHDefuzzificationStruct.get("Area").pack().cast(type) *
+                PowerHIGHDefuzzificationStruct.get("Centroid").pack().cast(type);
+        DFEVar PowerArea = 
+                PowerLOWDefuzzificationStruct.get("Area").pack().cast(type) +
+                PowerMEDIUMDefuzzificationStruct.get("Area").pack().cast(type) +
+                PowerHIGHDefuzzificationStruct.get("Area").pack().cast(type);
+        DFEVar Power = PowerSum / PowerArea;
+
+
+        // ------ Section: Creating Output Streams ------
+        io.output("Power", Power, type);
+
+    }
+
+    /**
+     * Function used to create a triangle shaped fuzzy set
+     * @param start start of the triangle
+     * @param peak peak of the triangle
+     * @param end end of the triangle
+     * @return a DFEVector containing all the parameters needed to describe the set
+     */
+    private DFEVector<DFEVar> createNewTriangleVector(double start, double peak, double end) {
+        // Create Vector
+        DFEVector<DFEVar> triangleVector = triangleFuzzySetType.newInstance(this);
+
+        // Set Values
+        triangleVector.connect(0, type.newInstance(this, start));
+        triangleVector.connect(1, type.newInstance(this, peak));
+        triangleVector.connect(2, type.newInstance(this, end));
+
+        return triangleVector;
+    }
+
+    /**
+     * Function used to calculate the degree of membership of an given value into a triangle shaped fuzzy set
+     * @param triangleVector the vector describing the fuzzy set
+     * @param value actual value
+     * @return degree of membership
+     */
+    private DFEVar getFuzzificationTriangle(DFEVector<DFEVar> triangleVector, DFEVar value) {
+        DFEVar degreeOfMembership = constant.var(0);
+
+        degreeOfMembership = (value > triangleVector[0] & value <= triangleVector[1]) ?
+                (value - triangleVector[0]) / (triangleVector[1] - triangleVector[0]) :
+                degreeOfMembership;
+        degreeOfMembership = (value > triangleVector[1] & value < triangleVector[2]) ?
+                1 - (value - triangleVector[1]) / (triangleVector[2] - triangleVector[1]) :
+                degreeOfMembership;
+
+        return degreeOfMembership;
+    }
+
+    /**
+     * Function used for defuzzification of triangle shaped fuzzy sets
+     * @param triangleVector the vector describing the fuzzy set
+     * @param degreeOfMembership the degree of membership of the variable to the fuzzy set
+     * @return a struct containing information about the area and the centroid
+     */
+    private DFEStruct getDefuzzificationTriangle(DFEVector<DFEVar> triangleVector,
+            DFEVar degreeOfMembership) {
+        // creating struct to write to
+        DFEStruct information = defuzzificationStruct.newInstance(this);
+
+        // Calculate intersection of the 3 different parts of the trapezoid
+        DFEVar xCordLeft = triangleVector[0] + (triangleVector[1] -
+                triangleVector[0]) * degreeOfMembership;
+        DFEVar xCordRight = triangleVector[1] + (triangleVector[2] -
+                triangleVector[1]) * (1 - degreeOfMembership);
+
+        // Calculate length of border lines
+        DFEVar lengthTop = xCordRight - xCordLeft;
+        DFEVar lengthBottom = triangleVector[2] - triangleVector[0];
+
+        // Calculate Area
+        DFEVar area = (degreeOfMembership / 2) * (lengthTop + lengthBottom);
+        information.set("Area", area);
+
+        // Calculate centroid
+        DFEVar centroid = (lengthBottom * lengthBottom - lengthTop * lengthTop +
+                (xCordRight - triangleVector[0]) * (lengthBottom + 2 * lengthTop)) /
+                (3 * (lengthBottom + lengthTop)) + triangleVector[0];
+        information.set("Centroid", centroid);
+
+        return information;
+    }
+
+}
