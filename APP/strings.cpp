@@ -150,11 +150,9 @@ const char* Strings::managerString3 =
     "}";
 
 const char* Strings::engineParametersImportString =
-    "import com.maxeler.maxcompiler.v2.build.EngineParameters;\n"
-    "import com.maxeler.maxcompiler.v2.managers.MAX3BoardModel;\n\n";
+    "import com.maxeler.maxcompiler.v2.build.EngineParameters;\n\n";
 
 const char* Strings::engineParametersString1 =
-    "    private static final String board                = \"DFEModel\";\n"
     "    private static final String isBuffGce            = \"isBuffGce\";\n"
     "    private static final String isMultiCycleReset    = \"isMultiCycleReset\";\n"
     "    private static final String CEReplication        = \"CEReplication\";\n"
@@ -212,7 +210,6 @@ const char* Strings::engineParametersString3 =
     "        declareParam(tag, DataType.STRING, \"\");\n\n"
     "        // build parameters\n"
     "        declareParam(target, Target.class, Target.DFE);\n"
-    "        declareParam(board,  DataType.MAXBOARDMODEL, MAX3BoardModel.MAX3424A);\n"
     "        declareParam(MPPRRetryThreshold, DataType.INT, 500);\n"
     "        declareParam(MPPRThreads, DataType.INT, 4);\n"
     "        declareParam(CEReplication, DataType.INT, 6);\n"
