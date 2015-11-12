@@ -821,12 +821,12 @@ void Engine::createProject()
     system(executeString.c_str());
 
     // Change names and so on
-    executeString = std::string("find . -type f -exec sed -i 's/SimpleDimmerApp/") + name + std::string("/g' {} \\;");
+    executeString = std::string("find " + projectName + "/ -type f -exec sed -i 's/{{cookiecutter.stem_name}}/") + name + std::string("/g' {} \\;");
     system(executeString.c_str());
-    executeString = std::string("find . -type f -exec sed -i 's/simpledimmerapp/") + nameLower 
+    executeString = std::string("find " + projectName + "/ -type f -exec sed -i 's/{{cookiecutter.stem_name|lower}}/") + nameLower 
         + std::string("/g' {} \\;");
     system(executeString.c_str());
-    executeString = std::string("find . -type f -exec sed -i 's/SimpleDimmer/") + projectName + 
+    executeString = std::string("find " + projectName + "/ -type f -exec sed -i 's/{{cookiecutter.cpu_project_name}}/") + projectName + 
         std::string("/g' {} \\;");
     system(executeString.c_str());
 }
