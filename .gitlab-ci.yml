@@ -1,0 +1,35 @@
+#
+# FuzzyLogicGenerator
+#
+# Required variables:
+#  - MAXCOMPILER_SIM_IMAGE: image with MaxCompiler and MaxCompiler Simulator
+#  - MAXCOMPILER_DFE_IMAGE: image with MaxCompiler and Quartus II
+#
+
+stages:
+- make-sim
+- make-dfe
+
+make-sim-FuzzyLogicGenerator:
+  image: $MAXCOMPILER_SIM_IMAGE
+  script:
+  - cd APP
+  - make
+  - rm -fr SimpleDimmer # Clean the commited version so new one can be generated
+  - ./FuzzyLogicGenerator -i SimpleDimmer.ffl
+  - make -C SimpleDimmer/CPUCode RUNRULE='Simulation'
+  stage: make-sim
+  tags:
+  - maxcompiler-sim
+
+make-dfe-FuzzyLogicGenerator:
+  image: $MAXCOMPILER_DFE_IMAGE
+  script:
+  - cd APP
+  - make
+  - rm -fr SimpleDimmer # Clean the commited version so new one can be generated
+  - ./FuzzyLogicGenerator -i SimpleDimmer.ffl
+  - make -C SimpleDimmer/CPUCode RUNRULE='DFE'
+  stage: make-dfe
+  tags:
+  - maxcompiler-dfe
